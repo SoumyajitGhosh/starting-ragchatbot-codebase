@@ -241,8 +241,62 @@ header h1 {
 }
 
 .sources-content {
-    padding: 0 0.5rem 0.25rem 1.5rem;
+    padding: 0.25rem 0.5rem 0.25rem 1.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.source-link,
+.source-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-color);
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.source-item {
+    background: var(--surface);
     color: var(--text-secondary);
+}
+
+.source-link {
+    background: rgba(37, 99, 235, 0.12);
+    border-color: rgba(37, 99, 235, 0.35);
+    color: #60a5fa;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease,
+        color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.source-link:hover {
+    background: rgba(37, 99, 235, 0.22);
+    border-color: var(--primary-color);
+    color: #93c5fd;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+}
+
+.source-link:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+.source-link-icon {
+    font-size: 0.7rem;
+    opacity: 0.85;
+    transition: transform 0.15s ease;
+}
+
+.source-link:hover .source-link-icon {
+    transform: translate(1px, -1px);
 }
 
 /* Markdown formatting styles */

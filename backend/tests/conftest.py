@@ -96,6 +96,25 @@ def mock_tool_manager():
 
 
 # ---------------------------------------------------------------------------
+# API fixtures (mocked RAGSystem, no real ChromaDB/OpenAI calls)
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def mock_rag_system():
+    """A MagicMock standing in for RAGSystem, wired with sensible defaults.
+
+    Individual tests override .query / .get_course_analytics / session_manager
+    return values or side_effects as needed.
+    """
+    mock = MagicMock(spec=RAGSystem)
+    mock.session_manager = MagicMock()
+    mock.session_manager.create_session.return_value = "test-session-id"
+    mock.query.return_value = ("This is a test answer.", [])
+    mock.get_course_analytics.return_value = {"total_courses": 0, "course_titles": []}
+    return mock
+
+
+# ---------------------------------------------------------------------------
 # Real, live-system fixtures (real OpenAI API + already-ingested chroma_db)
 # ---------------------------------------------------------------------------
 

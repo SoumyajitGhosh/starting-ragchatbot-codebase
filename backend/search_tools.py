@@ -44,14 +44,14 @@ class CourseSearchTool(Tool):
                         },
                         "lesson_number": {
                             "type": "integer",
-                            "description": "Specific lesson number to search within (e.g. 1, 2, 3)"
+                            "description": "Specific lesson number to search within (e.g. 1, 2, 3). Always pass this when the question names a specific lesson number - do not leave it out and put the number in `query` instead, since that skips lesson filtering entirely."
                         }
                     },
                     "required": ["query"]
                 }
             }
         }
-    
+
     def execute(self, query: str, course_name: Optional[str] = None, lesson_number: Optional[int] = None) -> str:
         """
         Execute the search tool with given parameters.
@@ -92,26 +92,30 @@ class CourseSearchTool(Tool):
         """Format search results with course and lesson context"""
         formatted = []
         sources = []  # Track sources for the UI
-        
+        seen_sources = set()  # Multiple chunks often share a course/lesson
+
         for doc, meta in zip(results.documents, results.metadata):
             course_title = meta.get('course_title', 'unknown')
             lesson_num = meta.get('lesson_number')
-            
+
             # Build context header
             header = f"[{course_title}"
             if lesson_num is not None:
                 header += f" - Lesson {lesson_num}"
             header += "]"
-            
-            # Track source for the UI
-            source = course_title
-            if lesson_num is not None:
-                source += f" - Lesson {lesson_num}"
-                link = self.store.get_lesson_link(course_title, lesson_num)
-            else:
-                link = self.store.get_course_link(course_title)
-            sources.append({"text": source, "link": link})
-            
+
+            # Track source for the UI, deduped per course/lesson
+            source_key = (course_title, lesson_num)
+            if source_key not in seen_sources:
+                seen_sources.add(source_key)
+                source = course_title
+                if lesson_num is not None:
+                    source += f" - Lesson {lesson_num}"
+                    link = self.store.get_lesson_link(course_title, lesson_num)
+                else:
+                    link = self.store.get_course_link(course_title)
+                sources.append({"text": source, "link": link})
+
             formatted.append(f"{header}\n{doc}")
         
         # Store sources for retrieval

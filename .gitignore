@@ -28,6 +28,8 @@ uploads/
 
 # Claude Code local project memory
 CLAUDE.local.md
+.claude/bash-history.log
+.claude/settings.local.json
 
 # OS
 .DS_Store

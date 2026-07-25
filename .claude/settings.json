@@ -1,0 +1,44 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(uv sync)",
+      "Bash(git status)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git show*)",
+      "Read",
+      "Grep",
+      "Glob"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run python -c \"import json,sys; d=json.load(sys.stdin); p=d.get('tool_input',{}).get('file_path') or d.get('tool_response',{}).get('filePath',''); print(p)\" | { read -r f; f=\"${f%$'\r'}\"; case \"$f\" in *.py) uv run black \"$f\" ;; esac; } 2>/dev/null || true",
+            "statusMessage": "Formatting with black..."
+          },
+          {
+            "type": "command",
+            "command": "uv run python -c \"import json,sys; d=json.load(sys.stdin); p=d.get('tool_input',{}).get('file_path') or d.get('tool_response',{}).get('filePath',''); print(p)\" | { read -r f; f=\"${f%$'\r'}\"; case \"$f\" in *.py) uv run ruff check \"$f\" ;; esac; }; exit 0",
+            "statusMessage": "Linting with ruff..."
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run python -c \"import json,sys,datetime; d=json.load(sys.stdin); cmd=d.get('tool_input',{}).get('command',''); print(f'{datetime.datetime.now().isoformat()} {cmd}')\" >> .claude/bash-history.log 2>/dev/null || true"
+          }
+        ]
+      }
+    ]
+  }
+}

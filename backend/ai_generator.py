@@ -2,6 +2,7 @@ import json
 from openai import OpenAI
 from typing import List, Optional, Dict, Any
 
+
 class AIGenerator:
     """Handles interactions with OpenAI's API for generating responses"""
 
@@ -46,16 +47,15 @@ Provide only the direct answer to what was asked.
         self.model = model
 
         # Pre-build base API parameters
-        self.base_params = {
-            "model": self.model,
-            "temperature": 0,
-            "max_tokens": 800
-        }
+        self.base_params = {"model": self.model, "temperature": 0, "max_tokens": 800}
 
-    def generate_response(self, query: str,
-                         conversation_history: Optional[str] = None,
-                         tools: Optional[List] = None,
-                         tool_manager=None) -> str:
+    def generate_response(
+        self,
+        query: str,
+        conversation_history: Optional[str] = None,
+        tools: Optional[List] = None,
+        tool_manager=None,
+    ) -> str:
         """
         Generate AI response with optional sequential tool usage and conversation context.
 
@@ -80,7 +80,11 @@ Provide only the direct answer to what was asked.
             message = choice.message
 
             # Terminate: no tool call requested (or no tool_manager to run one)
-            if choice.finish_reason != "tool_calls" or not message.tool_calls or not tool_manager:
+            if (
+                choice.finish_reason != "tool_calls"
+                or not message.tool_calls
+                or not tool_manager
+            ):
                 return message.content
 
             messages.append(message)
@@ -94,7 +98,9 @@ Provide only the direct answer to what was asked.
         final_response = self._call_model(messages, tools=None)
         return final_response.choices[0].message.content
 
-    def _build_initial_messages(self, query: str, conversation_history: Optional[str]) -> List[Dict[str, Any]]:
+    def _build_initial_messages(
+        self, query: str, conversation_history: Optional[str]
+    ) -> List[Dict[str, Any]]:
         """Build the initial system/user message list for a new query."""
         system_content = (
             f"{self.SYSTEM_PROMPT}\n\nPrevious conversation:\n{conversation_history}"
@@ -103,22 +109,21 @@ Provide only the direct answer to what was asked.
         )
         return [
             {"role": "system", "content": system_content},
-            {"role": "user", "content": query}
+            {"role": "user", "content": query},
         ]
 
     def _call_model(self, messages: List[Dict[str, Any]], tools: Optional[List]):
         """Make one chat completion call, offering tools if provided."""
-        api_params = {
-            **self.base_params,
-            "messages": messages
-        }
+        api_params = {**self.base_params, "messages": messages}
         if tools:
             api_params["tools"] = tools
             api_params["tool_choice"] = "auto"
 
         return self.client.chat.completions.create(**api_params)
 
-    def _execute_tool_calls(self, tool_calls, messages: List[Dict[str, Any]], tool_manager) -> Optional[str]:
+    def _execute_tool_calls(
+        self, tool_calls, messages: List[Dict[str, Any]], tool_manager
+    ) -> Optional[str]:
         """
         Execute each tool call for the current round, appending a tool-result
         message per call to `messages`.
@@ -131,8 +136,7 @@ Provide only the direct answer to what was asked.
             try:
                 tool_args = json.loads(tool_call.function.arguments)
                 tool_result = tool_manager.execute_tool(
-                    tool_call.function.name,
-                    **tool_args
+                    tool_call.function.name, **tool_args
                 )
             except Exception:
                 return (
@@ -140,10 +144,8 @@ Provide only the direct answer to what was asked.
                     "so I can't finish that request right now."
                 )
 
-            messages.append({
-                "role": "tool",
-                "tool_call_id": tool_call.id,
-                "content": tool_result
-            })
+            messages.append(
+                {"role": "tool", "tool_call_id": tool_call.id, "content": tool_result}
+            )
 
         return None

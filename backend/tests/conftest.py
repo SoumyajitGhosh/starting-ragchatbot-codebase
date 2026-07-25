@@ -13,10 +13,10 @@ from ai_generator import AIGenerator
 from config import config as real_app_config
 from rag_system import RAGSystem
 
-
 # ---------------------------------------------------------------------------
 # CourseSearchTool fixtures (mocked VectorStore)
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def sample_search_results():
@@ -27,8 +27,16 @@ def sample_search_results():
             "In this lesson we cover the basics of the Anthropic API.",
         ],
         metadata=[
-            {"course_title": "Building Towards Computer Use with Anthropic", "lesson_number": 0, "chunk_index": 0},
-            {"course_title": "Building Towards Computer Use with Anthropic", "lesson_number": 1, "chunk_index": 0},
+            {
+                "course_title": "Building Towards Computer Use with Anthropic",
+                "lesson_number": 0,
+                "chunk_index": 0,
+            },
+            {
+                "course_title": "Building Towards Computer Use with Anthropic",
+                "lesson_number": 1,
+                "chunk_index": 0,
+            },
         ],
         distances=[0.1, 0.2],
     )
@@ -55,6 +63,7 @@ def outline_tool(mock_vector_store):
 # ---------------------------------------------------------------------------
 # AIGenerator fixtures (mocked OpenAI client)
 # ---------------------------------------------------------------------------
+
 
 def _make_tool_call(call_id: str, name: str, arguments: dict):
     return SimpleNamespace(
@@ -118,6 +127,7 @@ def mock_rag_system():
 # Real, live-system fixtures (real OpenAI API + already-ingested chroma_db)
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture(scope="session")
 def real_config():
     if not real_app_config.OPENAI_API_KEY:
@@ -127,7 +137,9 @@ def real_config():
     # is "./chroma_db", which only resolves correctly when cwd == backend/. Pin it
     # to an absolute path so these tests work regardless of pytest's invocation dir.
     backend_dir = Path(__file__).resolve().parent.parent
-    return dataclasses.replace(real_app_config, CHROMA_PATH=str(backend_dir / "chroma_db"))
+    return dataclasses.replace(
+        real_app_config, CHROMA_PATH=str(backend_dir / "chroma_db")
+    )
 
 
 @pytest.fixture(scope="session")

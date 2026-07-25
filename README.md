@@ -54,3 +54,15 @@ The application will be available at:
 - Web Interface: `http://localhost:8000`
 - API Documentation: `http://localhost:8000/docs`
 
+## Code Quality
+
+This project uses [black](https://black.readthedocs.io/) for automatic code formatting.
+
+```bash
+# Auto-format the codebase
+./scripts/format.sh
+
+# Check formatting without modifying files (fails if reformatting is needed)
+./scripts/check.sh
+```
+

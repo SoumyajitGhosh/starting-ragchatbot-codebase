@@ -46,9 +46,9 @@ def test_lesson_specific_question_returns_matching_lesson_source(rag_system):
     answer, sources = rag_system.query("What is covered in lesson 2 of the MCP course?")
 
     assert answer.strip() != ""
-    assert any("Lesson 2" in s["text"] for s in sources), (
-        f"Expected a Lesson 2 source for a lesson-2-specific question, got: {sources}"
-    )
+    assert any(
+        "Lesson 2" in s["text"] for s in sources
+    ), f"Expected a Lesson 2 source for a lesson-2-specific question, got: {sources}"
 
 
 def test_session_history_persists_across_queries(rag_system):
@@ -70,4 +70,7 @@ def test_session_history_persists_across_queries(rag_system):
 
     history = rag_system.session_manager.get_conversation_history(session_id)
     assert history is not None
-    assert "Building Towards Computer Use with Anthropic" in history or "it" in history.lower()
+    assert (
+        "Building Towards Computer Use with Anthropic" in history
+        or "it" in history.lower()
+    )

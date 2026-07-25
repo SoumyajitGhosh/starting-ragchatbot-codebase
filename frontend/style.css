@@ -499,6 +499,40 @@ header h1 {
     margin: 0.5rem 0;
 }
 
+/* New Chat Button */
+.new-chat-button {
+    width: 100%;
+    text-align: left;
+    font-size: 0.875rem;
+    font-weight: 600;
+    font-family: inherit;
+    line-height: inherit;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 0.5rem 0;
+    border: none;
+    border-radius: 0;
+    background: none;
+    outline: none;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: color 0.2s ease;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.new-chat-button:hover,
+.new-chat-button:focus {
+    color: var(--primary-color);
+}
+
+.new-chat-button:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
 /* Sidebar Headers */
 .stats-header,
 .suggested-header {
@@ -638,6 +672,20 @@ details[open] .suggested-header::before {
     border-bottom: 1px solid var(--border-color);
     text-transform: none;
     line-height: 1.4;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.15s ease, color 0.15s ease, padding-left 0.15s ease;
+}
+
+.course-title-item:hover {
+    background: var(--surface-hover);
+    color: var(--primary-color);
+    padding-left: 0.5rem;
+}
+
+.course-title-item:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
 }
 
 .course-title-item:last-child {

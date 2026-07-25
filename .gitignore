@@ -26,6 +26,12 @@ uploads/
 *.swp
 *.swo
 
+# Claude Code local project memory
+CLAUDE.local.md
+
 # OS
 .DS_Store
 Thumbs.db
+
+# Playwright MCP debug artifacts
+.playwright-mcp/

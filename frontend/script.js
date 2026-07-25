@@ -5,7 +5,7 @@ const API_URL = '/api';
 let currentSessionId = null;
 
 // DOM elements
-let chatMessages, chatInput, sendButton, totalCourses, courseTitles;
+let chatMessages, chatInput, sendButton, totalCourses, courseTitles, newChatButton;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -15,7 +15,8 @@ document.addEventListener('DOMContentLoaded', () => {
     sendButton = document.getElementById('sendButton');
     totalCourses = document.getElementById('totalCourses');
     courseTitles = document.getElementById('courseTitles');
-    
+    newChatButton = document.getElementById('newChatButton');
+
     setupEventListeners();
     createNewSession();
     loadCourseStats();
@@ -28,8 +29,10 @@ function setupEventListeners() {
     chatInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') sendMessage();
     });
-    
-    
+
+    // New chat
+    newChatButton.addEventListener('click', startNewChat);
+
     // Suggested questions
     document.querySelectorAll('.suggested-item').forEach(button => {
         button.addEventListener('click', (e) => {
@@ -38,6 +41,25 @@ function setupEventListeners() {
             sendMessage();
         });
     });
+
+    // Course titles (delegated: list is re-rendered after the /courses fetch)
+    courseTitles.addEventListener('click', handleCourseTitleActivate);
+    courseTitles.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            handleCourseTitleActivate(e);
+        }
+    });
+}
+
+function handleCourseTitleActivate(e) {
+    const item = e.target.closest('.course-title-item');
+    if (!item) return;
+    if (e.type === 'keydown') e.preventDefault();
+
+    const course = item.dataset.course;
+    if (!course) return;
+    chatInput.value = `What is the outline of the "${course}" course?`;
+    sendMessage();
 }
 
 
@@ -157,6 +179,31 @@ async function createNewSession() {
     addMessage('Welcome to the Course Materials Assistant! I can help you with questions about courses, lessons and specific content. What would you like to know?', 'assistant', null, true);
 }
 
+// Start a fresh conversation from the "+ New Chat" button
+async function startNewChat() {
+    const previousSessionId = currentSessionId;
+
+    // Reset frontend state immediately, no page reload needed
+    chatInput.value = '';
+    createNewSession();
+    chatInput.focus();
+
+    // Clean up the old session on the backend so its history isn't retained
+    if (previousSessionId) {
+        try {
+            await fetch(`${API_URL}/session/clear`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ session_id: previousSessionId })
+            });
+        } catch (error) {
+            console.error('Error clearing session:', error);
+        }
+    }
+}
+
 // Load course statistics
 async function loadCourseStats() {
     try {
@@ -174,10 +221,17 @@ async function loadCourseStats() {
         
         // Update course titles
         if (courseTitles) {
+            courseTitles.innerHTML = '';
             if (data.course_titles && data.course_titles.length > 0) {
-                courseTitles.innerHTML = data.course_titles
-                    .map(title => `<div class="course-title-item">${title}</div>`)
-                    .join('');
+                data.course_titles.forEach(title => {
+                    const item = document.createElement('div');
+                    item.className = 'course-title-item';
+                    item.textContent = title;
+                    item.dataset.course = title;
+                    item.setAttribute('role', 'button');
+                    item.setAttribute('tabindex', '0');
+                    courseTitles.appendChild(item);
+                });
             } else {
                 courseTitles.innerHTML = '<span class="no-courses">No courses available</span>';
             }

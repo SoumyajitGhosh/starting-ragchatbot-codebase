@@ -16,6 +16,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "black>=26.5.1",
     "pytest>=9.1.1",
 ]
 
@@ -25,3 +26,6 @@ testpaths = ["backend/tests"]
 markers = [
     "integration: hits the real OpenAI API and real ChromaDB (costs tokens, needs network)",
 ]
+
+[tool.black]
+target-version = ["py313"]

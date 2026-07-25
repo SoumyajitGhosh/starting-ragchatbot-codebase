@@ -127,9 +127,13 @@ body {
     padding: 0;
 }
 
-/* Header - Hidden */
+/* Header */
 header {
-    display: none;
+    display: block;
+    padding: 1.25rem 2rem;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--surface);
+    flex-shrink: 0;
 }
 
 header h1 {

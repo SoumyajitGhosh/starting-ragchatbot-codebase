@@ -5,6 +5,9 @@ from typing import List, Optional, Dict, Any
 class AIGenerator:
     """Handles interactions with OpenAI's API for generating responses"""
 
+    # Maximum number of sequential tool-calling rounds per query
+    MAX_TOOL_ROUNDS = 2
+
     # Static system prompt to avoid rebuilding on each call
     SYSTEM_PROMPT = """ You are an AI assistant specialized in course materials and educational content with access to tools for course information.
 
@@ -15,7 +18,9 @@ Available Tools:
 Tool Usage:
 - Use **search_course_content** for questions about specific course content or detailed educational materials
 - Use **get_course_outline** for questions about a course's outline, structure, syllabus, or lesson list
-- **One tool call per query maximum**
+- When a question names a specific lesson number (e.g. "lesson 2", "the third lesson"), you MUST pass it via the `lesson_number` parameter of search_course_content, not as part of `query` - omitting it skips lesson filtering and searches the whole course
+- You may use tools across up to two sequential rounds per question when one call's results are needed to inform the next. Example: call get_course_outline to find a lesson's title, then use that title as the search topic in a second call to search_course_content on a different course.
+- Only make a second tool call if it's genuinely needed to answer the question - do not repeat a call with the same effective parameters, and do not chain calls "just in case"
 - Synthesize tool results into accurate, fact-based responses
 - If a tool yields no results, state this clearly without offering alternatives
 
@@ -52,7 +57,11 @@ Provide only the direct answer to what was asked.
                          tools: Optional[List] = None,
                          tool_manager=None) -> str:
         """
-        Generate AI response with optional tool usage and conversation context.
+        Generate AI response with optional sequential tool usage and conversation context.
+
+        Supports up to MAX_TOOL_ROUNDS rounds of tool calling: each round is a
+        separate API request, so the model can reason about a prior tool result
+        before deciding whether to make another tool call.
 
         Args:
             query: The user's question or request
@@ -63,64 +72,73 @@ Provide only the direct answer to what was asked.
         Returns:
             Generated response as string
         """
+        messages = self._build_initial_messages(query, conversation_history)
 
-        # Build system content efficiently - avoid string ops when possible
+        for _ in range(self.MAX_TOOL_ROUNDS):
+            response = self._call_model(messages, tools)
+            choice = response.choices[0]
+            message = choice.message
+
+            # Terminate: no tool call requested (or no tool_manager to run one)
+            if choice.finish_reason != "tool_calls" or not message.tool_calls or not tool_manager:
+                return message.content
+
+            messages.append(message)
+
+            error = self._execute_tool_calls(message.tool_calls, messages, tool_manager)
+            if error is not None:
+                return error
+
+        # Round budget exhausted but the model still wants to act - force a final,
+        # tools-free answer using everything accumulated so far.
+        final_response = self._call_model(messages, tools=None)
+        return final_response.choices[0].message.content
+
+    def _build_initial_messages(self, query: str, conversation_history: Optional[str]) -> List[Dict[str, Any]]:
+        """Build the initial system/user message list for a new query."""
         system_content = (
             f"{self.SYSTEM_PROMPT}\n\nPrevious conversation:\n{conversation_history}"
             if conversation_history
             else self.SYSTEM_PROMPT
         )
+        return [
+            {"role": "system", "content": system_content},
+            {"role": "user", "content": query}
+        ]
 
-        # Prepare API call parameters efficiently
+    def _call_model(self, messages: List[Dict[str, Any]], tools: Optional[List]):
+        """Make one chat completion call, offering tools if provided."""
         api_params = {
             **self.base_params,
-            "messages": [
-                {"role": "system", "content": system_content},
-                {"role": "user", "content": query}
-            ]
+            "messages": messages
         }
-
-        # Add tools if available
         if tools:
             api_params["tools"] = tools
             api_params["tool_choice"] = "auto"
 
-        # Get response from OpenAI
-        response = self.client.chat.completions.create(**api_params)
-        message = response.choices[0].message
+        return self.client.chat.completions.create(**api_params)
 
-        # Handle tool execution if needed
-        if response.choices[0].finish_reason == "tool_calls" and tool_manager:
-            return self._handle_tool_execution(message, api_params, tool_manager)
-
-        # Return direct response
-        return message.content
-
-    def _handle_tool_execution(self, assistant_message, base_params: Dict[str, Any], tool_manager):
+    def _execute_tool_calls(self, tool_calls, messages: List[Dict[str, Any]], tool_manager) -> Optional[str]:
         """
-        Handle execution of tool calls and get follow-up response.
-
-        Args:
-            assistant_message: The response message containing tool call requests
-            base_params: Base API parameters
-            tool_manager: Manager to execute tools
+        Execute each tool call for the current round, appending a tool-result
+        message per call to `messages`.
 
         Returns:
-            Final response text after tool execution
+            None on success, or a user-facing error string on the first failure
+            (remaining calls in this round are not attempted).
         """
-        # Start with existing messages
-        messages = base_params["messages"].copy()
-
-        # Add AI's tool call message
-        messages.append(assistant_message)
-
-        # Execute all tool calls and collect results
-        for tool_call in assistant_message.tool_calls:
-            tool_args = json.loads(tool_call.function.arguments)
-            tool_result = tool_manager.execute_tool(
-                tool_call.function.name,
-                **tool_args
-            )
+        for tool_call in tool_calls:
+            try:
+                tool_args = json.loads(tool_call.function.arguments)
+                tool_result = tool_manager.execute_tool(
+                    tool_call.function.name,
+                    **tool_args
+                )
+            except Exception:
+                return (
+                    f"I ran into a problem while using the '{tool_call.function.name}' tool, "
+                    "so I can't finish that request right now."
+                )
 
             messages.append({
                 "role": "tool",
@@ -128,12 +146,4 @@ Provide only the direct answer to what was asked.
                 "content": tool_result
             })
 
-        # Prepare final API call without tools
-        final_params = {
-            **self.base_params,
-            "messages": messages
-        }
-
-        # Get final response
-        final_response = self.client.chat.completions.create(**final_params)
-        return final_response.choices[0].message.content
+        return None
